@@ -1,0 +1,63 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User preferences and customizable profile details",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner's UID" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "Visual name of user" },
+        "photoUrl": { "type": "string", "description": "Custom user avatar URL" }
+      },
+      "required": ["userId", "email"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A single financial transaction record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string", "enum": ["飲食", "交通", "娛樂", "購物", "帳單", "其他"] },
+        "type": { "type": "string", "enum": ["expense", "income"] },
+        "date": { "type": "string", "format": "date-time" },
+        "note": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "amount", "category", "type", "date"]
+    },
+    "Goal": {
+      "title": "Savings Goal",
+      "description": "A visual target to encourage continuous saving tracking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "targetAmount": { "type": "number" },
+        "currentAmount": { "type": "number" },
+        "targetDate": { "type": "string" },
+        "predictedDate": { "type": "string" },
+        "aiAdvice": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "title", "targetAmount", "currentAmount"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/private/profile": {
+      "schema": "UserProfile",
+      "description": "Self-owned secure PII profile details"
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Transactional log entries for financial overview"
+    },
+    "/users/{userId}/goals/{goalId}": {
+      "schema": "Goal",
+      "description": "Savings indicators and targets tracking"
+    }
+  }
+}

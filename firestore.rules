@@ -1,0 +1,89 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net (First Rule Match Block)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Identity helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Schema Validation Blueprints (Anti-Update-Gap)
+    function isValidUserProfile(data) {
+      return data.userId == request.auth.uid
+        && data.get('email', '') is string && data.get('email', '').size() <= 200
+        && (data.get('displayName', null) == null || (data.get('displayName', null) is string && data.get('displayName', null).size() <= 100))
+        && (data.get('photoUrl', null) == null || (data.get('photoUrl', null) is string && data.get('photoUrl', null).size() <= 150000));
+    }
+
+    function isValidTransaction(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId == request.auth.uid
+        && data.amount is number && data.amount >= 0 && data.amount <= 1000000000
+        && data.category is string && data.category.size() <= 50
+        && data.type is string && (data.type == 'expense' || data.type == 'income')
+        && data.date is string && data.date.size() <= 50
+        && (data.note == null || (data.note is string && data.note.size() <= 500));
+    }
+
+    function isValidGoal(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId == request.auth.uid
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 100
+        && data.targetAmount is number && data.targetAmount > 0
+        && data.currentAmount is number && data.currentAmount >= 0
+        && (data.get('targetDate', null) == null || (data.get('targetDate', null) is string && data.get('targetDate', null).size() <= 50))
+        && (data.get('predictedDate', null) == null || (data.get('predictedDate', null) is string && data.get('predictedDate', null).size() <= 50))
+        && (data.get('aiAdvice', null) == null || (data.get('aiAdvice', null) is string && data.get('aiAdvice', null).size() <= 4000));
+    }
+
+    // Collection Security Bounds
+    
+    // UserProfile Private Profile split (relational isolation for PII)
+    match /users/{userId}/private/profile {
+      allow get: if isOwner(userId);
+      allow create, update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
+      allow delete: if isOwner(userId);
+    }
+
+    // Transaction resources
+    match /users/{userId}/transactions/{transactionId} {
+      allow list, get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidId(transactionId) && isValidTransaction(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) && isValidId(transactionId) && isValidTransaction(incoming())
+        && incoming().userId == existing().userId
+        && incoming().id == existing().id;
+      allow delete: if isOwner(userId);
+    }
+
+    // Goals resources
+    match /users/{userId}/goals/{goalId} {
+      allow list, get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidId(goalId) && isValidGoal(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) && isValidId(goalId) && isValidGoal(incoming())
+        && incoming().userId == existing().userId
+        && incoming().id == existing().id;
+      allow delete: if isOwner(userId);
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "SAVVY 極簡記帳系統",
+  "description": "具有 Neo-Minimalism 風格與 Gemini AI 語意解析功能的新極簡主義理財助理",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
